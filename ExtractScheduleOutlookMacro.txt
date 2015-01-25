@@ -1,0 +1,247 @@
+
+1
+2
+3
+4
+5
+6
+7
+8
+9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19
+20
+21
+22
+23
+24
+25
+26
+27
+28
+29
+30
+31
+32
+33
+34
+35
+36
+37
+38
+39
+40
+41
+42
+43
+44
+45
+46
+47
+48
+49
+50
+51
+52
+53
+54
+55
+56
+57
+58
+59
+60
+61
+62
+63
+64
+65
+66
+67
+68
+69
+70
+71
+72
+73
+74
+75
+76
+77
+78
+79
+80
+81
+82
+83
+84
+85
+86
+87
+88
+89
+90
+91
+92
+93
+94
+95
+96
+97
+98
+99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+'  自分の予定表を出力するマクロ
+Public Sub ExportMyCaldndar()
+    'Const MY_CSV_FILE_NAME = "c:\mycalendar.csv" ' エクスポートするファイル名を指定してください。
+    Dim fldCalendar ' As Folder
+    Set fldCalendar = Application.Session.GetDefaultFolder(olFolderCalendar)
+ 
+    Dim keyword As String
+    Dim laterMonth As String
+    keyword = InputBox("件名または本文のキーワードは？", "共有されている予定表のエクスポート", "重要")
+    laterMonth = InputBox("何か月後まで(負：何か月前から)", "共有されている予定表のエクスポート", 3)
+ 
+    ExportThisMonth fldCalendar, keyword, laterMonth '  MY_CSV_FILE_NAME
+End Sub
+ 
+   '  他人の予定を出力するマクロ
+    'Const OTHERS_CSV_FILE_NAME = "c:\others.csv" ' エクスポートするファイル名を指定してください。
+ 
+    'strUserName = InputBox("ユーザー名またはアドレスを入力してください", "共有されている予定表のエクスポート")
+    'Set objRecip = Application.Session.CreateRecipient(strUserName)
+    'objRecip.Resolve
+    'If Not objRecip.Resolved Then
+    'End If
+    'Set fldCalendar = Application.Session.GetSharedDefaultFolder(objRecip, olFolderCalendar)
+    'ExportThisMonth fldCalendar, OTHERS_CSV_FILE_NAME
+ 
+'  共通ルーチンです。必ずこちらもコピーしてください。
+Public Sub ExportThisMonth(fldCalendar, keyword As String, laterMonth As String)
+ 
+    
+    Dim strStart As String
+    Dim strEnd As String
+    Dim dtExport As Date
+    Dim objFSO 'As FileSystemObject
+    Dim stmCSVFile 'As TextStream
+    Dim colAppts As Items
+    Dim objAppt 'As AppointmentItem
+    Dim strLine As String
+    Dim message As String
+    Dim i As Integer
+    Dim maxItemsNum As Integer
+    
+      'from clipboard
+  
+  'Dim cpo As New MSForms.DataObject
+  'cpo.GetFromClipboard
+  'On Error GoTo Whoa
+  
+  'for browser launch
+  'Dim objShell As Object
+  'Set objShell = CreateObject("WScript.Shell")
+  
+  'Dim PARAM As String
+  'PARAM = DataObj.GetText(1)
+  'objShell.Run "http://sample.url.hoge?" + PARAM
+      
+    
+    maxItemsNum = 30
+    i = 0
+    
+    '
+    dtExport = Now ' 来月の予定をエクスポートする場合は Now の代わりに DateAdd("m",1,Now) を使用します。
+    ' 月単位ではなく任意の単位にする場合は以下の記述を変更します。
+    If Val(laterMonth) < 0 Then
+        strEnd = Year(Now) & "/" & Month(Now) & "/1 00:00"
+        strStart = DateAdd("m", Val(laterMonth), CDate(strEnd)) & " 00:00"
+    Else
+        strStart = Year(Now) & "/" & Month(Now) & "/1 00:00"
+        strEnd = DateAdd("m", Val(laterMonth), CDate(strStart)) & " 00:00"
+    End If
+    '
+    'Set objFSO = CreateObject("Scripting.FileSystemObject")
+    'Set stmCSVFile = objFSO.CreateTextFile(strFileName, True)
+ 
+    message = ""
+ 
+    'MsgBox "" & strEnd
+    ' CSV ファイルのヘッダです。出力するフィールドを増減する場合はこちらも変更してください。
+    'stmCSVFile.WriteLine """件名"",""場所"",""開始日"",""開始時刻"",""終了日"",""終了時刻"",""分類項目"",""主催者"",""必須出席者"",""任意出席者"""
+ 
+    Set colAppts = fldCalendar.Items
+    colAppts.Sort "[Start]"
+    colAppts.IncludeRecurrences = True
+    Set objAppt = colAppts.Find("[Start] < """ & strEnd & """ AND [End] >= """ & strStart & """")
+ 
+ 
+    While (Not objAppt Is Nothing) And i < maxItemsNum
+ 
+        If InStr(objAppt.Subject, keyword) > 0 Or InStr(objAppt.Body, keyword) > 0 Then
+            strLine = FormatDateTime(objAppt.Start, vbShortDate) & "(" & Mid("日月火水木金土", Weekday(objAppt.Start), 1) & ") " _
+            & FormatDateTime(objAppt.Start, vbShortTime) & "～"
+            If FormatDateTime(objAppt.End, vbShortDate) <> FormatDateTime(objAppt.Start, vbShortDate) Then
+                strLine = strLine & FormatDateTime(objAppt.End, vbShortDate) & " "
+            End If
+            
+            strLine = strLine & FormatDateTime(objAppt.End, vbShortTime) _
+            & " @" & objAppt.Location & " [" & objAppt.Subject & "]"
+            '""",""" & objAppt.Categories & _
+            '""",""" & objAppt.Organizer & _
+            '""",""" & objAppt.RequiredAttendees & _
+            '""",""" & objAppt.OptionalAttendees & _
+            '""""
+'
+       'stmCSVFile.WriteLine strLine
+        message = message & vbCrLf & strLine
+        End If
+ 
+        i = i + 1
+        Set objAppt = colAppts.FindNext
+    Wend
+    'stmCSVFile.Close
+ 
+    'MsgBox "スケジュール一覧" & cbCRLF & message
+    ' 取得した情報で予定アイテムを作成
+    Set objAppt = Application.CreateItem(olNoteItem) '予定表でなければここの引数を変え適切に処理する
+    'objAppt.Subject = "スケジュール一覧"
+ 
+    objAppt.Body = "スケジュール一覧 : (" & strStart & "～" & strEnd & ")" & vbCrLf & "-------------" & vbCrLf & message
+    
+  
+    'objAppt.Save
+    objAppt.Display
+  
+End Sub
